@@ -280,7 +280,7 @@ control 'Ensure \'allow-suspicious-udfs\' Is Set to \'FALSE\'' do
   Preventing shared libraries that do not contain user-defined functions from loading will
   reduce the attack surface of the server.'
 
-  describe file('/etc/mysql-#{service_name}/my.cnf') do
+  describe file("/etc/mysql-#{service_name}/my.cnf") do
     it { should exist }
     it { should be_file }
     its('content') { should_not match 'allow-suspicious-udfs' }
@@ -311,7 +311,7 @@ control 'Ensure \'mysqld\ Is Not Started with \'--skip-grant-tables\'' do
   If this option is used, all clients of the affected server will have unrestricted access to all
   databases.'
 
-  describe parse_config_file('/etc/mysql-#{service_name}/my.cnf') do
+  describe parse_config_file("/etc/mysql-#{service_name}/my.cnf") do
     its('mysqld') { should include('skip-grant-tables' => 'FALSE') }
   end
 end
@@ -557,7 +557,7 @@ control 'Ensure \'log-raw\' Is Set to \'OFF\'' do
   Rationale:
   With raw logging of passwords enabled someone with access to the log files might see plain text passwords.'
 
-  describe parse_config_file('/etc/mysql-#{service_name}/my.cnf') do
+  describe parse_config_file("/etc/mysql-#{service_name}/my.cnf") do
     its('mysqld') { should include('log-raw' => 'OFF') }
   end
 end
@@ -608,7 +608,7 @@ control 'Ensure Passwords Are Not Stored in the Global Configuration' do
   Rationale:
   The use of the password parameter may negatively impact the confidentiality of the user\'s password.'
 
-  describe parse_config_file('/etc/mysql-#{service_name}/my.cnf') do
+  describe parse_config_file("/etc/mysql-#{service_name}/my.cnf") do
     its('client') { should_not include('password') }
   end
 end
