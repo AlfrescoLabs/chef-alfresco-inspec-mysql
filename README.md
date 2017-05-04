@@ -1,4 +1,5 @@
 # chef-alfresco-inspec-mysql Inspec Profile
+[![Build Status](https://travis-ci.org/Alfresco/chef-alfresco-inspec-mysql.svg)](https://travis-ci.org/Alfresco/chef-alfresco-inspec-mysql?branch=master)
 
 Inspec profile for [chef-alfresco-db](https://github.com/Alfresco/chef-alfresco-db) cookbook
 
