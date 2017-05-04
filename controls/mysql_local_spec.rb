@@ -300,7 +300,7 @@ control 'Ensure \'local_infile\' Is Disabled' do
   server via a SQL injection vulnerability'
 
   describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -e \"SHOW VARIABLES WHERE Variable_name = 'local_infile';\" | grep local_infile | awk '{print $2}'") do
-    its(:stdout) { should match /^OFF/ }
+    its(:stdout) { should match(/^OFF/) }
   end
 end
 
@@ -328,7 +328,7 @@ control 'Ensure \'--skip-symbolic-links\' Is Enabled' do
   allow someone to direct actions by to MySQL server to other files and/or directories.'
 
   describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -e \"SHOW variables LIKE 'have_symlink';\" | grep have_symlink | awk '{print $2}'") do
-    its(:stdout) { should match /^DISABLED/ }
+    its(:stdout) { should match(/^DISABLED/) }
   end
 end
 
