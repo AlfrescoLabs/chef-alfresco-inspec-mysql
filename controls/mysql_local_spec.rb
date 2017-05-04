@@ -1,5 +1,6 @@
 user = node.content['db']['root_user']
 pass = node.content['db']['server_root_password']
+service_name = node.content['mysql_local']['service_name']
 
 # hardening following https://benchmarks.cisecurity.org/tools2/mysql/CIS_Oracle_MySQL_Community_Server_5.6_Benchmark_v1.0.0.pdf
 
@@ -10,7 +11,7 @@ control 'Mysql-Service' do
   impact 1.0
   desc 'mysql service should be enabled and running'
 
-  describe service('mysql-default') do
+  describe service("mysql-#{service_name}") do
     it { should be_enabled }
     it { should be_running }
   end
@@ -27,7 +28,7 @@ control 'MySQL Operating System Level Configuration' do
   Moving the database off the system partition will reduce the probability of denial of service \
   via the exhaustion of available disk space to the operating system.'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -e \"show variables where variable_name = 'datadir'\" | grep datadir | awk '{print $2}'") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -e \"show variables where variable_name = 'datadir'\" | grep datadir | awk '{print $2}'") do
     its(:stdout) { should_not match(%r{\/^\/$}) } # datadir should not be in root '/'
     its(:stdout) { should_not match(%r{^\/(var|user)\/}) } # datadir should not be in a system directory '/'
     its(:stdout) { should match(data_dir_attribute) }
@@ -265,7 +266,7 @@ control 'Ensure the \'test\' Database Is Not Installed' do
   The test database can be accessed by all users and can be used to consume system
   resources.  Dropping the test database will reduce the attack surface of the MySQL server'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -e \"SHOW DATABASES like 'test';\"") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -e \"SHOW DATABASES like 'test';\"") do
     its(:stdout) { should eq '' }
   end
 end
@@ -279,7 +280,7 @@ control 'Ensure \'allow-suspicious-udfs\' Is Set to \'FALSE\'' do
   Preventing shared libraries that do not contain user-defined functions from loading will
   reduce the attack surface of the server.'
 
-  describe file('/etc/mysql-default/my.cnf') do
+  describe file('/etc/mysql-#{service_name}/my.cnf') do
     it { should exist }
     it { should be_file }
     its('content') { should_not match 'allow-suspicious-udfs' }
@@ -298,7 +299,7 @@ control 'Ensure \'local_infile\' Is Disabled' do
   Disabling local_infile reduces an attacker\'s ability to read sensitive files off the affected
   server via a SQL injection vulnerability'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -e \"SHOW VARIABLES WHERE Variable_name = 'local_infile';\" | grep local_infile | awk '{print $2}'") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -e \"SHOW VARIABLES WHERE Variable_name = 'local_infile';\" | grep local_infile | awk '{print $2}'") do
     its(:stdout) { should match /^OFF/ }
   end
 end
@@ -310,7 +311,7 @@ control 'Ensure \'mysqld\ Is Not Started with \'--skip-grant-tables\'' do
   If this option is used, all clients of the affected server will have unrestricted access to all
   databases.'
 
-  describe parse_config_file('/etc/mysql-default/my.cnf') do
+  describe parse_config_file('/etc/mysql-#{service_name}/my.cnf') do
     its('mysqld') { should include('skip-grant-tables' => 'FALSE') }
   end
 end
@@ -326,7 +327,7 @@ control 'Ensure \'--skip-symbolic-links\' Is Enabled' do
   is executing as root as arbitrary files may be overwritten.  The symbolic-links option might
   allow someone to direct actions by to MySQL server to other files and/or directories.'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -e \"SHOW variables LIKE 'have_symlink';\" | grep have_symlink | awk '{print $2}'") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -e \"SHOW variables LIKE 'have_symlink';\" | grep have_symlink | awk '{print $2}'") do
     its(:stdout) { should match /^DISABLED/ }
   end
 end
@@ -340,7 +341,7 @@ control 'Ensure the \'daemon_memcached\' Plugin Is Disabled' do
   the TCP/IP port of the plugin can access and modify the data. However, not all data is
   exposed by default.'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -e \"SELECT * FROM information_schema.plugins WHERE PLUGIN_NAME='daemon_memcached';\"") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -e \"SELECT * FROM information_schema.plugins WHERE PLUGIN_NAME='daemon_memcached';\"") do
     its(:stdout) { should eq '' }
   end
 end
@@ -353,7 +354,7 @@ control 'Ensure \'secure_file_priv\' Is Not Empty ' do
   Rationale:
   Setting secure_file_priv reduces an attacker\'s ability to read sensitive files off the affected server via a SQL injection vulnerability.'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -e \"SHOW GLOBAL VARIABLES WHERE Variable_name = 'secure_file_priv' AND Value<>'';") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -e \"SHOW GLOBAL VARIABLES WHERE Variable_name = 'secure_file_priv' AND Value<>'';") do
     its(:stdout) { should eq '' }
   end
 
@@ -373,7 +374,7 @@ control 'Ensure \'sql_mode\' Contains \'STRICT_ALL_TABLES\'' do
   more secure choice. For example, by default MySQL will truncate data if it does not fit in a field,
   which can lead to unknown behavior, or be leveraged by an attacker to circumvent data validation.'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -e \"SHOW VARIABLES LIKE 'sql_mode';\"") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -e \"SHOW VARIABLES LIKE 'sql_mode';\"") do
     its(:stdout) { should match 'STRICT_ALL_TABLES' }
   end
 end
@@ -528,7 +529,7 @@ control 'Ensure Log Files Are Stored on a Non-System Partition' do
   Rationale:
   Moving the MySQL logs off the system partition will reduce the probability of denial of service via the exhaustion of available disk space to the operating system'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -N -B -e \"SELECT @@global.log_bin_basename;\"") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -N -B -e \"SELECT @@global.log_bin_basename;\"") do
     its(:stdout) { should_not match(%r{\/^\/$}) } # datadir should not be in root '/'
     its(:stdout) { should_not match(%r{^\/(var|user)\/}) } # datadir should not be in a system directory '/'
     its(:stdout) { should match(log_bin) }
@@ -556,7 +557,7 @@ control 'Ensure \'log-raw\' Is Set to \'OFF\'' do
   Rationale:
   With raw logging of passwords enabled someone with access to the log files might see plain text passwords.'
 
-  describe parse_config_file('/etc/mysql-default/my.cnf') do
+  describe parse_config_file('/etc/mysql-#{service_name}/my.cnf') do
     its('mysqld') { should include('log-raw' => 'OFF') }
   end
 end
@@ -607,7 +608,7 @@ control 'Ensure Passwords Are Not Stored in the Global Configuration' do
   Rationale:
   The use of the password parameter may negatively impact the confidentiality of the user\'s password.'
 
-  describe parse_config_file('/etc/mysql-default/my.cnf') do
+  describe parse_config_file('/etc/mysql-#{service_name}/my.cnf') do
     its('client') { should_not include('password') }
   end
 end
@@ -630,7 +631,7 @@ control 'Ensure Passwords Are Set for All MySQL Accounts' do
   Without a password only knowing the username and the list of allowed hosts will allow someone to connect to the server and assume the identity of the user.
   This, in effect, bypasses authentication mechanisms.'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -N -B -e \"SELECT User,host FROM mysql.user WHERE (plugin IN('mysql_native_password', 'mysql_old_password') AND (LENGTH(Password) = 0 OR Password IS NULL)) OR (plugin='sha256_password' AND LENGTH(authentication_string) = 0);\"") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -N -B -e \"SELECT User,host FROM mysql.user WHERE (plugin IN('mysql_native_password', 'mysql_old_password') AND (LENGTH(Password) = 0 OR Password IS NULL)) OR (plugin='sha256_password' AND LENGTH(authentication_string) = 0);\"") do
     its(:stdout) { should eq '' }
   end
 end
@@ -641,7 +642,7 @@ control 'Ensure No Users Have Wildcard Hostnames' do
   Rationale:
   Avoiding the use of wildcards within hostnames helps control the specific locations from which a given user may connect to and interact with the database.'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -N -B -e \"SELECT user, host FROM mysql.user WHERE host = '%';\"") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -N -B -e \"SELECT user, host FROM mysql.user WHERE host = '%';\"") do
     its(:stdout) { should eq '' }
   end
 end
@@ -652,7 +653,7 @@ control 'Ensure No Anonymous Accounts Exist' do
   Rationale:
   Removing anonymous accounts will help ensure that only identified and trusted principals are capable of interacting with MySQL.'
 
-  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-default/mysqld.sock -N -B -e \"SELECT user,host FROM mysql.user WHERE user = '';\"") do
+  describe command("mysql -u #{user} -p#{pass} mysql -S /var/run/mysql-#{service_name}/mysqld.sock -N -B -e \"SELECT user,host FROM mysql.user WHERE user = '';\"") do
     its(:stdout) { should eq '' }
   end
 end
